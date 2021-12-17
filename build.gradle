@@ -28,4 +28,4 @@ dependencies {
     testRuntimeOnly 'org.scala-lang.modules:scala-xml_2.12:1.2.0'
 }
 
-mainClassName = 'gradle.spark.quickstart.App'
+mainClassName = 'AwsSupportCaseFailsToYieldLogs'
