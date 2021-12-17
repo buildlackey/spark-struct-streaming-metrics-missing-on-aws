@@ -1,0 +1,31 @@
+plugins {
+    id 'scala'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    implementation 'org.scala-lang:scala-library:2.12.13'
+
+
+    implementation  "org.apache.spark:spark-sql_2.12:3.1.2"
+    implementation "org.apache.spark:spark-sql-kafka-0-10_2.12:3.1.2"
+
+
+
+    implementation "com.typesafe.scala-logging:scala-logging_2.12:3.9.4"
+    implementation "com.typesafe:config:1.4.0"
+
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.scalatest:scalatest_2.12:3.2.0'
+    testImplementation 'org.scalatestplus:junit-4-12_2.12:3.2.0.0'
+
+    testRuntimeOnly 'org.scala-lang.modules:scala-xml_2.12:1.2.0'
+}
+
+mainClassName = 'gradle.spark.quickstart.App'
