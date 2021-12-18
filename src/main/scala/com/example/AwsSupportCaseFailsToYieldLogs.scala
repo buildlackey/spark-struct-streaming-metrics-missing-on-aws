@@ -14,7 +14,10 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 object AwsSupportCaseFailsToYieldLogs extends StrictLogging {
-  logger.warn("THIS SHOULD APPEAR IN LOG")
+  logger.warn("THIS warn SHOULD APPEAR IN LOG")
+  logger.info("THIS info SHOULD APPEAR IN LOG")
+  logger.debug("THIS debug SHOULD APPEAR IN LOG")
+  logger.trace("THIS trace SHOULD APPEAR IN LOG")
 
   case class KafkaEvent(mgpMsgKey: Array[Byte],
                         mgpMsg: Array[Byte],

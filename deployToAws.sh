@@ -1,3 +1,7 @@
+
+#   Once you have an EMR cluster that you know how to ssh into, you can use this script to deploy the 'fat jar' 
+#   that runs the spark app
+
 host=$1
 sshKeyPath=$2
 
