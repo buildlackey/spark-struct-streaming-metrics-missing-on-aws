@@ -8,13 +8,13 @@ import org.apache.spark.sql.{Dataset, SparkSession}
 
 import java.io.File
 import java.util
-import java.util.Properties
+import java.util.{Date, Properties, Random}
 import scala.collection.JavaConverters.asScalaIteratorConverter
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 object AwsSupportCaseFailsToYieldLogs extends StrictLogging {
-  logger.error("THIS SHOULD APPEAR IN LOG")
+  logger.warn("THIS SHOULD APPEAR IN LOG")
 
   case class KafkaEvent(mgpMsgKey: Array[Byte],
                         mgpMsg: Array[Byte],
@@ -55,6 +55,7 @@ object AwsSupportCaseFailsToYieldLogs extends StrictLogging {
       }
 
       def sendEvent(key: Array[Byte], value: Array[Byte]): Unit = {
+        logger.info(s"sending record to kafka: ${value.toString}")
         producer.send(new ProducerRecord[Array[Byte], Array[Byte]](topic, key, value))
       }
     }
@@ -69,11 +70,22 @@ object AwsSupportCaseFailsToYieldLogs extends StrictLogging {
   }
 
   def main(args: Array[String]): Unit = {
+    println("args are " + args.toList)
     if (args.length < 2) {
       throw new IllegalArgumentException("You need to specify at least 2 args [localTest|cluster] [earliest|latest]")
     }
 
     val (sparkSessionConfig, kafkaConfig) = {
+      if (args.length >= 1) {
+        println("> 1")
+      }
+      if (args(0) == "localTest") {
+        println("is localtest")
+      }
+      if (args.length >= 1 && args(0) == "localTest") {
+        println("is both")
+      }
+
       val offsetPointer = args(1)
       if (args.length >= 1 && args(0) == "localTest") {
         sendEventsToLocalTopic("test-topic", "localhost:9092")
@@ -119,22 +131,37 @@ object AwsSupportCaseFailsToYieldLogs extends StrictLogging {
     }
 
     val initDF = dataSetOfKafkaEvent.map { item: KafkaEvent => item.toString }
-    val function: (Dataset[String], Long) => Unit =
-      (dataSetOfString, batchId) => {
-        val iter: util.Iterator[String] = dataSetOfString.toLocalIterator()
 
-        val lines = iter.asScala.toList.mkString("\n")
-        val outfile = writeStringToTmpFile(lines)
-        println(s"writing to file: ${outfile.getAbsolutePath}")
-        logger.error(s"writing to file: ${outfile.getAbsolutePath} /  $lines")
+
+    val writeEachRecordToDistinctFile: (Dataset[String], Long) => Unit =
+      (dataSetOfString: Dataset[String], batchId: Long) => {
+        val folderPathForBatch = s"${System.getProperty("java.io.tmpdir")}/streaming_bug_batch_${batchId}_${new Date().toInstant.toString}"
+        val folderForBatch = new File(folderPathForBatch)
+        assert(folderForBatch.exists() || folderForBatch.mkdirs())
+        dataSetOfString.foreachPartition(
+          (iterOfString: Iterator[String]) => {
+            val randomGenerator = new Random()
+            val folderPathForPartition = s"$folderPathForBatch/${randomGenerator.nextInt().toString}"
+            val folderForPartition = new File(folderPathForPartition)
+            assert(folderForPartition.exists() || folderForPartition.mkdirs())
+            while (iterOfString.hasNext) {
+              val string = iterOfString.next()
+              val fileForRecord = new File(s"${folderForPartition}/${randomGenerator.nextInt().toString}")
+              val fileForRecordPath = fileForRecord.getAbsolutePath
+              logger.error(s"writing kafka record to ${fileForRecordPath}")     // lower levels dont show up in output. strange !
+              java.nio.file.Files.write(java.nio.file.Paths.get(fileForRecordPath), string.getBytes)
+            }
+          }
+        )
       }
+
 
     val trigger = Trigger.ProcessingTime(Duration("1 second"))
 
     println("Streaming DataFrame : " + initDF.isStreaming)
     println("Schema : " + initDF.printSchema())
     initDF.writeStream
-      .foreachBatch(function)
+      .foreachBatch(writeEachRecordToDistinctFile)
       .trigger(trigger)
       .outputMode("append")
       .start
