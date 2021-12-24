@@ -41,7 +41,8 @@ This will upload the .jar and launch script (launchApp.sh) to  /home/hadoop/bug
     # launch the app on your cluster:
     brokerAddr=brokerUrlOfYourKafkaCluster
     topic=some_topic_actively_receiving_records
-    bash -x launchApp.sh cluster [earliest|latest] $brokerAddr $topic
+    sparkMaster=yarn
+    bash -x launchApp.sh  $sparkMaster [earliest|latest] $brokerAddr $topic
 
 Once the app is launched you can see that each Kafka record read in is being dumped to a distinct file.
 You can open up the file and see your kafka records (they are assumed to be binary format) so batches are 
